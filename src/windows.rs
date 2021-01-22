@@ -1,6 +1,6 @@
 //! Windows impl of mio-enabled serial ports.
-use mio::{Evented, Poll, PollOpt, Ready, Token};
-use mio_named_pipes::NamedPipe;
+use mio::windows::NamedPipe;
+use mio::{event, Interest, Poll, Registry, Token};
 use serialport::prelude::*;
 use serialport::windows::COMPort;
 use std::ffi::OsStr;
@@ -336,29 +336,27 @@ impl Write for Serial {
     }
 }
 
-impl Evented for Serial {
+impl event::Source for Serial {
     fn register(
-        &self,
-        poll: &Poll,
+        &mut self,
+        registry: &Registry,
         token: Token,
-        interest: Ready,
-        opts: PollOpt,
+        interest: Interest,
     ) -> io::Result<()> {
-        self.pipe.register(poll, token, interest, opts)
+        self.pipe.register(registry, token, interest)
     }
 
     fn reregister(
-        &self,
-        poll: &Poll,
+        &mut self,
+        registry: &Registry,
         token: Token,
-        interest: Ready,
-        opts: PollOpt,
+        interest: Interest,
     ) -> io::Result<()> {
-        self.pipe.reregister(poll, token, interest, opts)
+        self.pipe.reregister(registry, token, interest)
     }
 
-    fn deregister(&self, poll: &Poll) -> io::Result<()> {
-        self.pipe.deregister(poll)
+    fn deregister(&mut self, registry: &Registry) -> io::Result<()> {
+        self.pipe.deregister(registry)
     }
 }
 

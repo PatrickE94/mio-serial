@@ -2,9 +2,7 @@
 extern crate mio;
 extern crate mio_serial;
 
-#[cfg(unix)]
-use mio::unix::UnixReady;
-use mio::{Events, Poll, PollOpt, Ready, Token};
+use mio::{Events, Interest, Poll, Registry, Token};
 use std::env;
 use std::io;
 use std::io::Read;
@@ -17,31 +15,11 @@ const DEFAULT_TTY: &str = "/dev/ttyUSB0";
 #[cfg(windows)]
 const DEFAULT_TTY: &str = "COM1";
 
-#[cfg(unix)]
-fn ready_of_interest() -> Ready {
-    Ready::readable() | UnixReady::hup() | UnixReady::error()
-}
-
-#[cfg(windows)]
-fn ready_of_interest() -> Ready {
-    Ready::readable()
-}
-
-#[cfg(unix)]
-fn is_closed(state: Ready) -> bool {
-    state.contains(UnixReady::hup() | UnixReady::error())
-}
-
-#[cfg(windows)]
-fn is_closed(state: Ready) -> bool {
-    false
-}
-
 pub fn main() {
     let mut args = env::args();
     let tty_path = args.nth(1).unwrap_or_else(|| DEFAULT_TTY.into());
 
-    let poll = Poll::new().unwrap();
+    let mut poll = Poll::new().unwrap();
     let mut events = Events::with_capacity(1024);
 
     // Create the listener
@@ -49,7 +27,8 @@ pub fn main() {
     let settings = mio_serial::new(tty_path, 115200);
     let mut rx = mio_serial::Serial::from_builder(settings).unwrap();
 
-    poll.register(&rx, SERIAL_TOKEN, ready_of_interest(), PollOpt::edge())
+    poll.registry()
+        .register(&mut rx, SERIAL_TOKEN, Interest::READABLE)
         .unwrap();
 
     let mut rx_buf = [0u8; 1024];
@@ -68,12 +47,11 @@ pub fn main() {
         for event in events.iter() {
             match event.token() {
                 SERIAL_TOKEN => {
-                    let ready = event.readiness();
-                    if is_closed(ready) {
-                        println!("Quitting due to event: {:?}", ready);
+                    if event.is_write_closed() || event.is_read_closed() || event.is_error() {
+                        println!("Quitting due to event: {:?}", event);
                         break 'outer;
                     }
-                    if ready.is_readable() {
+                    if event.is_readable() {
                         // With edge triggered events, we must perform reading until we receive a WouldBlock.
                         // See https://docs.rs/mio/0.6/mio/struct.Poll.html for details.
                         loop {
