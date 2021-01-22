@@ -45,10 +45,9 @@ pub fn main() {
     let mut events = Events::with_capacity(1024);
 
     // Create the listener
-    let settings = mio_serial::SerialPortSettings::default();
-
-    println!("Opening {} at 9600,8N1", tty_path);
-    let mut rx = mio_serial::Serial::from_path(&tty_path, &settings).unwrap();
+    println!("Opening {} at 115200,8N1", tty_path);
+    let settings = mio_serial::new(tty_path, 115200);
+    let mut rx = mio_serial::Serial::from_builder(settings).unwrap();
 
     poll.register(&rx, SERIAL_TOKEN, ready_of_interest(), PollOpt::edge())
         .unwrap();

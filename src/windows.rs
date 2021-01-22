@@ -26,7 +26,7 @@ pub struct Serial {
 
 impl Serial {
     /// Opens a COM port at the specified path
-    pub fn from_path<T: AsRef<Path>>(path: T, settings: &SerialPortSettings) -> io::Result<Self> {
+    pub fn from_path<T: AsRef<Path>>(path: T) -> io::Result<Self> {
         let mut name = Vec::<u16>::new();
 
         name.extend(OsStr::new("\\\\.\\").encode_wide());
@@ -51,7 +51,6 @@ impl Serial {
             // Construct NamedPipe and COMPort from Handle
             let pipe = unsafe { NamedPipe::from_raw_handle(handle) };
             let mut serial = unsafe { COMPort::from_raw_handle(handle) };
-            serial.set_all(settings)?;
             override_comm_timeouts(handle)?;
 
             Ok(Serial {
@@ -65,11 +64,6 @@ impl Serial {
 }
 
 impl SerialPort for Serial {
-    /// Returns a struct with the current port settings
-    fn settings(&self) -> SerialPortSettings {
-        self.inner.settings()
-    }
-
     /// Return the name associated with the serial port, if known.
     fn name(&self) -> Option<String> {
         self.inner.name()
@@ -130,15 +124,6 @@ impl SerialPort for Serial {
 
     // Port settings setters
 
-    /// Applies all settings for a struct. This isn't guaranteed to involve only
-    /// a single call into the driver, though that may be done on some
-    /// platforms.
-    fn set_all(&mut self, settings: &SerialPortSettings) -> crate::Result<()> {
-        self.inner.set_all(settings)?;
-        override_comm_timeouts(self.inner.as_raw_handle())?;
-        Ok(())
-    }
-
     /// Sets the baud rate.
     ///
     /// ## Errors
@@ -174,6 +159,16 @@ impl SerialPort for Serial {
     /// required for trait completeness.
     fn set_timeout(&mut self, _: Duration) -> crate::Result<()> {
         Ok(())
+    }
+
+    /// Start transmitting a break
+    fn set_break(&self) -> crate::Result<()> {
+        self.inner.set_break()
+    }
+
+    /// Stop transmitting a break
+    fn clear_break(&self) -> crate::Result<()> {
+        self.inner.clear_break()
     }
 
     // Functions for setting non-data control signal pins

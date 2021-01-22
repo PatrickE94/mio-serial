@@ -23,7 +23,7 @@ libudev = ["serialport/libudev"]
 
 [dependencies]
 mio = "^0.6"
-serialport = { version = "~3.3", default-features = false }
+serialport = { version = "~4.0", default-features = false }
 
 [target.'cfg(unix)'.dependencies]
 nix = "^0.17"

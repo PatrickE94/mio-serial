@@ -1,16 +1,15 @@
 //! Unix impl of mio-enabled serial ports.
-use std::convert::AsRef;
 use std::io::{self, Read, Write};
 use std::os::unix::prelude::*;
-use std::path::Path;
 use std::time::Duration;
 
 use mio::unix::EventedFd;
 use mio::{Evented, Poll, PollOpt, Ready, Token};
 
-use serialport::posix::TTYPort;
-use serialport::prelude::*;
-use serialport::{Error, ErrorKind};
+use serialport::{
+    ClearBuffer, DataBits, Error, ErrorKind, FlowControl, Parity, SerialPort, SerialPortBuilder,
+    StopBits, TTYPort,
+};
 
 use nix::sys::termios::{self, SetArg, SpecialCharacterIndices};
 use nix::{self, libc};
@@ -29,28 +28,25 @@ fn map_nix_error(e: nix::Error) -> Error {
 }
 
 impl Serial {
-    /// Open a nonblocking serial port from the provided path.
+    /// Open a nonblocking serial port using the provided SerialPortBuilder.
     ///
     /// ## Example
     ///
     /// ```ignore
     /// use std::path::Path;
     /// use mio_serial::unix::Serial;
-    /// use mio_serial::SerialPortSettings;
+    /// use mio_serial::SerialPortBuilder;
     ///
     /// let tty_name = Path::new("/dev/ttyUSB0");
     ///
-    /// let serial = Serial::from_path(tty_name, &SerialPortSettings::default()).unwrap();
+    /// let serial = Serial::from_builder(mio_serial::new().path(tty_name)).unwrap();
     /// ```
-    pub fn from_path<T: AsRef<Path>>(
-        path: T,
-        settings: &SerialPortSettings,
-    ) -> crate::Result<Self> {
-        let port = TTYPort::open(path.as_ref(), settings)?;
+    pub fn from_builder(builder: SerialPortBuilder) -> crate::Result<Self> {
+        let port = builder.open_native()?;
         Serial::from_serial(port)
     }
 
-    /// Convert an existing `serialport::posix::TTYPort` struct.
+    /// Convert an existing `serialport::TTYPort` struct.
     ///
     ///
     /// ## Example
@@ -137,11 +133,6 @@ impl Serial {
 }
 
 impl SerialPort for Serial {
-    /// Returns a struct with the current port settings
-    fn settings(&self) -> SerialPortSettings {
-        self.inner.settings()
-    }
-
     /// Return the name associated with the serial port, if known.
     fn name(&self) -> Option<String> {
         self.inner.name()
@@ -203,13 +194,6 @@ impl SerialPort for Serial {
 
     // Port settings setters
 
-    /// Applies all settings for a struct. This isn't guaranteed to involve only
-    /// a single call into the driver, though that may be done on some
-    /// platforms.
-    fn set_all(&mut self, settings: &SerialPortSettings) -> crate::Result<()> {
-        self.inner.set_all(settings)
-    }
-
     /// Sets the baud rate.
     ///
     /// ## Errors
@@ -245,6 +229,16 @@ impl SerialPort for Serial {
     /// required for trait completeness.
     fn set_timeout(&mut self, _: Duration) -> crate::Result<()> {
         Ok(())
+    }
+
+    /// Start transmitting a break
+    fn set_break(&self) -> crate::Result<()> {
+        self.inner.set_break()
+    }
+
+    /// Stop transmitting a break
+    fn clear_break(&self) -> crate::Result<()> {
+        self.inner.clear_break()
     }
 
     // Functions for setting non-data control signal pins

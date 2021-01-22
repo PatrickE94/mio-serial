@@ -23,7 +23,7 @@ fn get_available_serialport_name() -> Option<String> {
 fn test_from_path() {
     let tty_path = get_available_serialport_name().expect("No available serial ports.");
 
-    let serial = Serial::from_path(&tty_path, &mio_serial::SerialPortSettings::default())
+    let serial = Serial::from_builder(mio_serial::new(&tty_path, 115200))
         .expect(&format!("Unable to open serial port: {}", &tty_path));
 
     assert!(serial.as_raw_fd() > 0, "Illegal file descriptor.");
@@ -34,11 +34,8 @@ fn test_from_path() {
 fn test_from_serial() {
     let tty_path = get_available_serialport_name().expect("No available serial ports.");
 
-    let tty_port = serialport::posix::TTYPort::open(
-        Path::new(&tty_path),
-        &mio_serial::SerialPortSettings::default(),
-    )
-    .expect(&format!("Unable to open serial port: {}", &tty_path));
+    let tty_port = serialport::TTYPort::open(&serialport::new(&tty_path, 115200))
+        .expect(&format!("Unable to open serial port: {}", &tty_path));
 
     let serial = Serial::from_serial(tty_port).expect("Unable to wrap TTYPort.");
 

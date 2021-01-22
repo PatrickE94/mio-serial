@@ -12,6 +12,8 @@
 
 // Enums, Structs, and Traits from the serialport crate
 pub use serialport::{
+    new,
+
     // Enums
     ClearBuffer,
     DataBits,
@@ -23,9 +25,8 @@ pub use serialport::{
     // Traits
     SerialPort,
 
+    SerialPortBuilder,
     SerialPortInfo,
-    SerialPortSettings,
-
     StopBits,
 };
 
