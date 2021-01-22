@@ -22,11 +22,12 @@ default = ["libudev"]
 libudev = ["serialport/libudev"]
 
 [dependencies]
-mio = "^0.6"
+mio = "^0.7"
 serialport = { version = "~3.3", default-features = false }
 
 [target.'cfg(unix)'.dependencies]
 nix = "^0.17"
+mio = { version = "^0.7", features = [ "os-ext" ] }
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["commapi", "handleapi", "winbase"] }

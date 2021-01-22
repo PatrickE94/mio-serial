@@ -5,8 +5,8 @@ use std::os::unix::prelude::*;
 use std::path::Path;
 use std::time::Duration;
 
-use mio::unix::EventedFd;
-use mio::{Evented, Poll, PollOpt, Ready, Token};
+use mio::unix::SourceFd;
+use mio::{event, Interest, Registry, Token};
 
 use serialport::posix::TTYPort;
 use serialport::prelude::*;
@@ -502,28 +502,26 @@ impl FromRawFd for Serial {
     }
 }
 
-impl Evented for Serial {
+impl event::Source for Serial {
     fn register(
-        &self,
-        poll: &Poll,
+        &mut self,
+        registry: &Registry,
         token: Token,
-        interest: Ready,
-        opts: PollOpt,
+        interest: Interest,
     ) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).register(poll, token, interest, opts)
+        SourceFd(&self.as_raw_fd()).register(registry, token, interest)
     }
 
     fn reregister(
-        &self,
-        poll: &Poll,
+        &mut self,
+        registry: &Registry,
         token: Token,
-        interest: Ready,
-        opts: PollOpt,
+        interest: Interest,
     ) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).reregister(poll, token, interest, opts)
+        SourceFd(&self.as_raw_fd()).reregister(registry, token, interest)
     }
 
-    fn deregister(&self, poll: &Poll) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).deregister(poll)
+    fn deregister(&mut self, registry: &Registry) -> io::Result<()> {
+        SourceFd(&self.as_raw_fd()).deregister(registry)
     }
 }
